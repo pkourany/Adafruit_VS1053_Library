@@ -13,8 +13,8 @@ Adafruit VS1053 Codec Breakout
   Written by Limor Fried/Ladyada for Adafruit Industries.  
   BSD license, all text above must be included in any redistribution
 
-  Spark Core
-  ----------
+Spark Core
+----------
   
   Adapted for Spark Core by Paul Kourany, Nov 24, 2014
   
