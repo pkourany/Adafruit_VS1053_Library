@@ -24,6 +24,21 @@
 // Connect CLK, MISO and MOSI to hardware SPI pins. 
 // See http://arduino.cc/en/Reference/SPI "Connections"
 
+#if defined (SPARK)
+// These are the pins used for the breakout example
+#define BREAKOUT_RESET  D2      // VS1053 reset pin (output)
+#define BREAKOUT_CS     D3     // VS1053 chip select pin (output)
+#define BREAKOUT_DCS    D4      // VS1053 Data/command select pin (output)
+// These are the pins used for the music maker shield
+#define SHIELD_CS     D2      // VS1053 chip select pin (output)
+#define SHIELD_DCS    D3      // VS1053 Data/command select pin (output)
+
+// These are common pins between breakout and shield
+#define CARDCS A0     // Card chip select pin
+// DREQ should be an Int pin, see http://arduino.cc/en/Reference/attachInterrupt
+#define DREQ A1       // VS1053 Data request, ideally an Interrupt pin
+
+#else //Arduino
 // These are the pins used for the breakout example
 #define BREAKOUT_RESET  9      // VS1053 reset pin (output)
 #define BREAKOUT_CS     10     // VS1053 chip select pin (output)
@@ -36,6 +51,8 @@
 #define CARDCS 4     // Card chip select pin
 // DREQ should be an Int pin, see http://arduino.cc/en/Reference/attachInterrupt
 #define DREQ 3       // VS1053 Data request, ideally an Interrupt pin
+#endif
+
 
 Adafruit_VS1053_FilePlayer musicPlayer = 
   // create breakout-example object!
