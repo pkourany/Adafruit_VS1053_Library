@@ -14,21 +14,9 @@
 #ifndef ADAFRUIT_VS1053_H
 #define ADAFRUIT_VS1053_H
 
-#if defined (SPARK)
+#include "application.h"
 #include "SD.h"
-#else
-#if (ARDUINO >= 100)
- #include <Arduino.h>
-#else
- #include <WProgram.h>
- #include <pins_arduino.h>
-#endif
 
-#include "pins_arduino.h"
-#include "wiring_private.h"
-#include <SPI.h> 
-#include <SD.h>
-#endif	//SPARK
 
 #define VS1053_FILEPLAYER_TIMER0_INT 255 // allows useInterrupt to accept pins 0 to 254
 #define VS1053_FILEPLAYER_PIN_INT 5
