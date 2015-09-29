@@ -12,29 +12,17 @@
   BSD license, all text above must be included in any redistribution
  ****************************************************/
 
-#if defined (SPARK)
 #include "Adafruit_VS1053.h"
 #include "SD.h"
 #include "SparkIntervalTimer.h"
-#else
-#include <Adafruit_VS1053.h>
-#include <SD.h>
-#endif	//SPARK
+
 
 static Adafruit_VS1053_FilePlayer *myself;
 
-#if defined (SPARK)
-	#define cli	noInterrupts
-	#define sei interrupts
-	#define _BV(bit) (1 << (bit))
-#endif
+#define cli	noInterrupts
+#define sei interrupts
+#define _BV(bit) (1 << (bit))
 
-
-#if defined(__AVR__)
-SIGNAL(TIMER0_COMPA_vect) {
-  myself->feedBuffer();
-}
-#endif
 
 static void feeder(void) {
   myself->feedBuffer();
@@ -43,48 +31,12 @@ static void feeder(void) {
 
 
 static const uint8_t dreqinttable[] = {
-#if defined (SPARK)
+#if (PLATFORM_ID == 0) || (PLATFORM_ID == 6)
   D0, D0, D1, D1, D2, D2, D3, D3,
   D4, D4, A0, A0, A1, A1, A3, A3,
   A4, A4, A5, A5, A6, A6, A7, A7,
-#elif defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega328__) || defined(__AVR_ATmega8__) 
-  2, 0,
-  3, 1,
-#elif defined(__AVR_ATmega1281__) || defined(__AVR_ATmega2561__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__) 
-  2, 0,
-  3, 1,
-  21, 2, 
-  20, 3,
-  19, 4,
-  18, 5,
-#elif  defined(__AVR_ATmega32U4__) && defined(CORE_TEENSY)
-  5, 0,
-  6, 1,
-  7, 2,
-  8, 3,
-#elif  defined(__AVR_AT90USB1286__) && defined(CORE_TEENSY)
-  0, 0,
-  1, 1,
-  2, 2,
-  3, 3,
-  36, 4,
-  37, 5,
-  18, 6,
-  19, 7,
-#elif  defined(__arm__) && defined(CORE_TEENSY)
-  0, 0, 1, 1, 2, 2, 3, 3, 4, 4,
-  5, 5, 6, 6, 7, 7, 8, 8, 9, 9,
-  10, 10, 11, 11, 12, 12, 13, 13, 14, 14,
-  15, 15, 16, 16, 17, 17, 18, 18, 19, 19,
-  20, 20, 21, 21, 22, 22, 23, 23, 24, 24,
-  25, 25, 26, 26, 27, 27, 28, 28, 29, 29,
-  30, 30, 31, 31, 32, 32, 33, 33,
-#elif  defined(__AVR_ATmega32U4__) 
-  3, 0,
-  2, 1,
-  0, 2,
-  1, 3,
-  7, 4,
+#else
+	#error "Incorrect Particle platform!!"
 #endif
 };
 
@@ -92,19 +44,8 @@ boolean Adafruit_VS1053_FilePlayer::useInterrupt(uint8_t type) {
   myself = this;  // oy vey
     
   if (type == VS1053_FILEPLAYER_TIMER0_INT) {
-#if defined(__AVR__)
-    OCR0A = 0xAF;
-    TIMSK0 |= _BV(OCIE0A);
-    return true;
-#elif defined(__arm__) && defined(CORE_TEENSY)
     IntervalTimer *t = new IntervalTimer();
-    return (t && t->begin(feeder, 1024)) ? true : false;
-#elif defined (SPARK)
-    IntervalTimer *t = new IntervalTimer();
-    return (t && t->begin(feeder, 1024, uSec, TIMER2)) ? true : false;
-#else
-    return false;
-#endif
+    return (t && t->begin(feeder, 1024, uSec)) ? true : false;
   }
   if (type == VS1053_FILEPLAYER_PIN_INT) {
     for (uint8_t i=0; i<sizeof(dreqinttable); i+=2) {
@@ -254,10 +195,6 @@ void Adafruit_VS1053_FilePlayer::feedBuffer(void) {
 /***************************************************************/
 
 /* VS1053 'low level' interface */
-#if !defined (SPARK)
-static volatile uint8_t *clkportreg, *misoportreg, *mosiportreg;
-static uint8_t clkpin, misopin, mosipin;
-#endif
 
 Adafruit_VS1053::Adafruit_VS1053(int8_t mosi, int8_t miso, int8_t clk, 
 			   int8_t rst, int8_t cs, int8_t dcs, int8_t dreq) {
@@ -271,14 +208,6 @@ Adafruit_VS1053::Adafruit_VS1053(int8_t mosi, int8_t miso, int8_t clk,
 
   useHardwareSPI = false;
 
-#if !defined (SPARK)
-  clkportreg = portOutputRegister(digitalPinToPort(_clk));
-  clkpin = digitalPinToBitMask(_clk);
-  misoportreg = portInputRegister(digitalPinToPort(_miso));
-  misopin = digitalPinToBitMask(_miso);
-  mosiportreg = portOutputRegister(digitalPinToPort(_mosi));
-  mosipin = digitalPinToBitMask(_mosi);
-#endif
 }
 
 
@@ -618,7 +547,6 @@ uint8_t Adafruit_VS1053::spiread(void)
   if (useHardwareSPI) {
     x = SPI.transfer(0x00);
   } else {
-#if defined (SPARK)
 	//Software SPI
     for (i=7; i>=0; i--) {
       if (digitalRead(_miso) == HIGH)
@@ -629,18 +557,7 @@ uint8_t Adafruit_VS1053::spiread(void)
     // Make sure clock ends low
 	digitalWrite(_clk, LOW);	
   }
-#else
-    for (i=7; i>=0; i--) {
-      if ((*misoportreg) & misopin)
-	x |= (1<<i);    
-      *clkportreg |= clkpin;
-      *clkportreg &= ~clkpin;
-      //    asm("nop; nop");
-    }
-    // Make sure clock ends low
-    *clkportreg &= ~clkpin;
-  }
-#endif
+
   return x;
 }
 
@@ -653,7 +570,6 @@ void Adafruit_VS1053::spiwrite(uint8_t c)
     SPI.transfer(c);
 
   } else {
-#if defined (SPARK)
 	//Software SPI
     for (int8_t i=7; i>=0; i--) {
 	  digitalWrite(_clk, LOW);
@@ -667,19 +583,6 @@ void Adafruit_VS1053::spiwrite(uint8_t c)
 	// Make sure clock ends low
     digitalWrite(_clk, LOW);
   }
-#else
-    for (int8_t i=7; i>=0; i--) {
-      *clkportreg &= ~clkpin;
-      if (c & (1<<i)) {
-	*mosiportreg |= mosipin;
-      } else {
-	*mosiportreg &= ~mosipin;
-      }
-      *clkportreg |= clkpin;
-    }
-    *clkportreg &= ~clkpin;   // Make sure clock ends low
-  }
-#endif
 }
 
 
