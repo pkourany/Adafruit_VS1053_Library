@@ -21,6 +21,13 @@
 #include "application.h"
 #include "Sd2Card.h"
 
+#if !defined(PLATFORM_ID)		// Core v0.3.4
+#warning "CORE"
+  #define pinSetFast(_pin)		PIN_MAP[_pin].gpio_peripheral->BSRR = PIN_MAP[_pin].gpio_pin
+  #define pinResetFast(_pin)	PIN_MAP[_pin].gpio_peripheral->BRR = PIN_MAP[_pin].gpio_pin
+  #define pgm_read_byte(addr) (*(const uint8_t *)(addr))
+#endif
+
 //#include "spark_wiring_spi.h"
 //#include "spark_wiring_usbserial.h"
 
@@ -759,17 +766,22 @@ uint8_t Sd2Card::sparkSPISend(uint8_t data) {
 	else {						// SPI Mode is Software so use bit bang method
 		for (uint8_t bit = 0; bit < 8; bit++)  {
 			if (data & (1 << (7-bit)))		// walks down mask from bit 7 to bit 0
-				PIN_MAP[mosiPin_].gpio_peripheral->BSRR = PIN_MAP[mosiPin_].gpio_pin; // Data High
+				//PIN_MAP[mosiPin_].gpio_peripheral->BSRR = PIN_MAP[mosiPin_].gpio_pin; // Data High
+				pinSetFast(mosiPin_);
 			else
-				PIN_MAP[mosiPin_].gpio_peripheral->BRR = PIN_MAP[mosiPin_].gpio_pin; // Data Low
+				//PIN_MAP[mosiPin_].gpio_peripheral->BRR = PIN_MAP[mosiPin_].gpio_pin; // Data Low
+				pinResetFast(mosiPin_);
 			
-			PIN_MAP[clockPin_].gpio_peripheral->BSRR = PIN_MAP[clockPin_].gpio_pin; // Clock High
+			//PIN_MAP[clockPin_].gpio_peripheral->BSRR = PIN_MAP[clockPin_].gpio_pin; // Clock High
+			pinSetFast(clockPin_);
 
 			b <<= 1;
-			if (PIN_MAP[misoPin_].gpio_peripheral->IDR & PIN_MAP[misoPin_].gpio_pin)
+			//if (PIN_MAP[misoPin_].gpio_peripheral->IDR & PIN_MAP[misoPin_].gpio_pin)
+			if (pinReadFast(misoPin_))
 				b |= 1;
 
-			PIN_MAP[clockPin_].gpio_peripheral->BRR = PIN_MAP[clockPin_].gpio_pin; // Clock Low
+			//PIN_MAP[clockPin_].gpio_peripheral->BRR = PIN_MAP[clockPin_].gpio_pin; // Clock Low
+			pinResetFast(clockPin_);
 		}
 	}
 	return b;
